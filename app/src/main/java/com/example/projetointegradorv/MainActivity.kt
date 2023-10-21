@@ -5,14 +5,17 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.Button
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.example.projetointegradorv.ui.theme.ProjetoIntegradorVTheme
+import java.io.BufferedReader
+import java.io.InputStreamReader
 import java.io.OutputStream
 import java.net.Socket
 
@@ -32,40 +35,57 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun RemoteControlButtons() {
+    var receivedInfo by remember { mutableStateOf("") }
     Column {
-        CommandButton(text = "Play/Pause", command = "play_pause")
-        CommandButton(text = "Stop", command = "stop")
-        CommandButton(text = "Next Track", command = "next_track")
-        CommandButton(text = "Previous Track", command = "previous_track")
-        CommandButton(text = "Volume Up", command = "volume_up")
-        CommandButton(text = "Volume Down", command = "volume_down")
+        CommandButton(text = "Play/Pause", command = "play_pause") { info ->
+            receivedInfo = info
+        }
+        CommandButton(text = "Stop", command = "stop") { info ->
+            receivedInfo = info
+        }
+        CommandButton(text = "Next Track", command = "next_track") { info ->
+            receivedInfo = info
+        }
+        CommandButton(text = "Previous Track", command = "previous_track") { info ->
+            receivedInfo = info
+        }
+        CommandButton(text = "Volume Up", command = "volume_up") { info ->
+            receivedInfo = info
+        }
+        CommandButton(text = "Volume Down", command = "volume_down") { info ->
+            receivedInfo = info
+        }
+
+        // Display area for information from the server
+        Text(text = receivedInfo)
     }
 }
 
 @Composable
-fun CommandButton(text: String, command: String) {
-    Button(onClick = { sendCommandToServer(command) }) {
+fun CommandButton(text: String, command: String, onClick: (String) -> Unit) {
+    Button(onClick = { onClick(command) }) {
         Text(text = text)
     }
 }
 
-private fun sendCommandToServer(command: String) {
+private fun sendCommandToServer(command: String, infoCallback: (String) -> Unit) {
     Thread {
         try {
-            // Configure o endereço IP e a porta do servidor no PC
             val serverIp = "192.168.10.16"
             val serverPort = 5000
 
-            // Crie um socket e conecte ao servidor
             val socket = Socket(serverIp, serverPort)
-
-            // Obtenha o OutputStream para enviar o comando
             val outputStream: OutputStream = socket.getOutputStream()
 
-            // Envie o comando como bytes
             outputStream.write(command.toByteArray())
 
-            // Feche a conexão
+            // Receive information from the server
+            val input = BufferedReader(InputStreamReader(socket.getInputStream()))
+            val info = input.readLine()
+
+            // Call the callback to update the receivedInfo state
+            infoCallback(info)
+
             socket.close()
         } catch (e: Exception) {
             e.printStackTrace()
